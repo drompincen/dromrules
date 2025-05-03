@@ -1,0 +1,4 @@
+condition,condition,condition,action,action
+color,weight,type,tag,category
+red,>400,suv,truck,heavy
+yellow,=500,*,\$color,light
