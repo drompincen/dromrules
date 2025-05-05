@@ -1,47 +1,62 @@
-// src/test/java/com/example/evaluator/EvaluatorTest.java
 package com.example.evaluator;
 
+import com.example.javarules.Operator;
+import com.example.javarules.RuleBuilder;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class EvaluatorTest {
+public class EvaluatorJavaRulesTest {
 
     @Test
-    public void testMultipleActions() throws Exception {
-        // point to your updated rules.csv in src/test/resources
-        File rulesFile = new File("./src/test/resources/rules.csv");
-
-        // ← use fromCsv(...) before build()
-        Evaluator<Car> evaluator = EvaluatorBuilder
-                .builder(Car.class)
-                .fromCsv(rulesFile)
+    public void testJavaRulesFromBuilder() throws Exception {
+        // -- 1) Build the two Java rules --
+        Rule<Car> r1 = RuleBuilder.rule(Car.class)
+                .when("color",   Operator.EQUALS,       "red")
+                .when("weight",  Operator.GREATER_THAN, "400")
+                .when("type",    Operator.EQUALS,       "suv")
+                .thenSet("tag",       "truck")
+                .thenSet("category",  "heavy")
                 .build();
 
+        Rule<Car> r2 = RuleBuilder.rule(Car.class)
+                .when("color",   Operator.EQUALS,      "yellow")
+                .when("weight",  Operator.EQUALS,      "500")
+                .when("type",    Operator.ANY,         "")
+                .thenCopy("tag",       "color")
+                .thenSet("category",   "light")
+                .build();
+
+        // -- 2) Wire them into an Evaluator via the builder --
+        Evaluator<Car> evaluator = EvaluatorBuilder
+                .builder(Car.class)
+                .withRules(List.of(r1, r2))
+                .build();
+
+        // -- 3) Prepare inputs --
         List<Car> cars = Arrays.asList(
                 new Car("red",    500, "suv"),
                 new Car("yellow", 500, null),
                 new Car("blue",   300, "coupe")
         );
 
-        // ← now just process the collection
+        // -- 4) Process via single API call --
         evaluator.process(cars);
 
-        // Rule 1: red,>400,suv -> tag="truck",   category="heavy"
+        // -- 5) Verify Rule 1 on red SUV --
         Car redCar = cars.get(0);
         assertEquals("truck", redCar.getTag());
         assertEquals("heavy", redCar.getCategory());
 
-        // Rule 2: yellow,=500,* -> tag="$color" → "yellow", category="light"
+        // -- 6) Verify Rule 2 on yellow (type=null) --
         Car yellowCar = cars.get(1);
         assertEquals("yellow", yellowCar.getTag());
         assertEquals("light",  yellowCar.getCategory());
 
-        // No rule matches blue coupe → tag & category remain null
+        // -- 7) Verify no match on blue coupe --
         Car blueCar = cars.get(2);
         assertNull(blueCar.getTag());
         assertNull(blueCar.getCategory());

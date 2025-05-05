@@ -16,15 +16,19 @@ public class Rule<T> {
         this.actions = actions;
     }
 
-    public static <T> Rule<T> fromMaps(Class<T> type,
-                                       Map<String, String> condMap,
-                                       Map<String, String> actionMap) {
+    /**
+     * Build a Rule directly from maps of raw strings (no type param needed).
+     */
+    public static <T> Rule<T> fromMaps(
+            Map<String, String> condMap,
+            Map<String, String> actionMap
+    ) {
         List<Condition<T>> conds = new ArrayList<>();
-        for (Map.Entry<String, String> e : condMap.entrySet()) {
+        for (var e : condMap.entrySet()) {
             conds.add(new Condition<>(e.getKey(), e.getValue()));
         }
         List<Action<T>> acts = new ArrayList<>();
-        for (Map.Entry<String, String> e : actionMap.entrySet()) {
+        for (var e : actionMap.entrySet()) {
             acts.add(new Action<>(e.getKey(), e.getValue()));
         }
         return new Rule<>(conds, acts);

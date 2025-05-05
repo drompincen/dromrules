@@ -5,29 +5,52 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * Generic evaluator that processes a collection of objects against rules defined in a CSV file.
+ * Generic evaluator that processes a collection of objects against rules.
+ * Rules may come from a CSV (via CsvRuleLoader) or be supplied directly.
  */
 public class Evaluator<T> {
-    private final Class<T> type;
+    private final List<Rule<T>> rules;
 
-    Evaluator(Class<T> type) {
-        this.type = type;
+    /**
+     * Constructor: always supply a list of rules.
+     */
+    public Evaluator(List<Rule<T>> rules) {
+        this.rules = rules;
     }
 
     /**
-     * Process each item in the collection against rules in the CSV file.
-     * If a rule matches, its action is applied to the item.
-     *
-     * Usage: Evaluator.builder(Car.class).build().process(cars, new File("rules.csv"));
+     * Process each item in the collection against the loaded rules.
+     * Mutates each item in place by applying the first matching rule.
      */
-    public void process(Collection<T> items, File csvFile) throws Exception {
-        List<Rule<T>> rules = CsvRuleLoader.load(type, csvFile);
+    public void process(Collection<T> items) {
         for (T item : items) {
             for (Rule<T> rule : rules) {
-                if (rule.matches(item)) {
-                    rule.apply(item);
+                try {
+                    if (rule.matches(item)) {
+                        rule.apply(item);
+                        break; // only first‑match
+                    }
+                } catch (Exception e) {
+                    throw new RuntimeException("Error applying rule", e);
                 }
             }
         }
+    }
+
+    /**
+     * Evaluate a single item (mutates and returns it).
+     */
+    public T evaluate(T item) {
+        for (Rule<T> rule : rules) {
+            try {
+                if (rule.matches(item)) {
+                    rule.apply(item);
+                    break;
+                }
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+        return item;
     }
 }
